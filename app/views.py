@@ -6,6 +6,7 @@ from flask import request
 from app import app
 from app.app_response.response import Response
 from app.services.loan_evaluation import LoanEvaluator
+from app.services.request_validator import RequestValidator
 
 
 @app.route("/", methods=["GET"])
@@ -18,19 +19,23 @@ def health_check():
 @app.route("/evaluate-loan", methods=["POST"])
 def evaluate_loan():
     """ Controls the logic to process the loan evaluation request """
-    body = None
-    try:
-        body = json.loads(request.data)
-    except json.JSONDecodeError as e:
+    check_request, validated_data = RequestValidator.validate_required_params(
+        request, "loan_eval")
+    if check_request["status"]:
+        number_validation, requested_amount = RequestValidator.validate_number_type(
+            validated_data["amount"])
+        if not number_validation["status"]:
+            response = Response(data={},
+                                message="Invalid request",
+                                server_info=number_validation["error"])
+            return response.create_response()
+    else:
         response = Response(data={},
                             message="Invalid request",
-                            server_info=e.__str__())
+                            server_info=check_request["error"])
+        return response.create_response()
 
-    if body:
-        requested_amount = float(body["amount"])
-        decision = LoanEvaluator.loan_decision(requested_amount)
-        response = Response(data={},
-                            message=decision,
-                            server_info="Loan evaluated")
+    decision = LoanEvaluator.loan_decision(requested_amount)
+    response = Response(data={}, message=decision, server_info="Loan evaluated")
 
     return response.create_response()
