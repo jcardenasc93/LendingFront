@@ -28,14 +28,14 @@ def evaluate_loan():
             response = Response(data={},
                                 message="Invalid request",
                                 server_info=number_validation["error"])
-            return response.create_response()
+            return response.create_response(), 400
     else:
         response = Response(data={},
                             message="Invalid request",
                             server_info=check_request["error"])
-        return response.create_response()
+        return response.create_response(), 400
 
     decision = LoanEvaluator.loan_decision(requested_amount)
     response = Response(data={}, message=decision, server_info="Loan evaluated")
 
-    return response.create_response()
+    return response.create_response(), 200
